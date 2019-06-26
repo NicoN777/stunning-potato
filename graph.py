@@ -1,13 +1,16 @@
+from collections import defaultdict
+from queue import PriorityQueue
+
 class Node:
     def __init__(self, data):
         self.data = data
         self.visited = False
 
-    def __str__(self):
-        return f'Data: {self.data}, Visited: {self.visited}'
-
     def __repr__(self):
         return f'Node({self.data})'
+
+    def __lt__(self, other):
+        return self.data < other.data
 
     def __eq__(self, other):
         return self.data == other.data
@@ -15,49 +18,103 @@ class Node:
     def __hash__(self):
         return hash(repr(self))
 
+class Edge:
+    def __init__(self, v:Node, weight:int):
+        self.v = v
+        self.weight = weight
 
+    def __repr__(self):
+        return f'Edge({repr(self.v)}, {self.weight})'
+
+    def __lt__(self, other):
+        return self.weight < other.weight
+
+    def __eq__(self, other):
+        return self.weight == other.weight
+
+    def __hash__(self):
+        return hash(repr(self))
 
 class Graph:
-    def __init__(self, n:int, m:int, edges:list):
-        self.n = n
-        self.m = m
+    def __init__(self, edges:list):
         self.edges = edges
-        self.graph = {Node(i):set() for i in range(1,n+1)}
-        for _ in edges:
-            source, dest, cost = _
-            if source in self.graph:
-                self.graph[source].add(dest)
+        self.graph = defaultdict(list)
+        for u, v, w in self.edges:
+            self.graph[Node(u)]
+            self.graph[Node(v)]
 
-        print(self.graph)
+        for _ in self.edges:
+            source, dest, weight = _
+            source = Node(source)
+            dest = Node(dest)
+            edge = Edge(dest, weight)
+            if edge in self.graph[source]:
+                continue
+            self.graph[source].append(edge)
 
     def dfs(self, s:Node):
-        print(f'Source: {s}')
-        costs = {k:0 for k in self.graph.keys()}
+        # print(f'Source: {s}')
+        self.source = s
+        self.costs = {k:0 for k in self.graph.keys()}
         stack = []
-        stack.append(s)
+        stack.append(self.source)
         s.visited = True
         while stack:
-            v = stack.pop()
-            for u in self.graph[v]:
-                print(u)
-                previous = v
-                if not u.visited:
-                    stack.append(u)
-                    u.visited = True
-                    costs[u] = costs[v] + 6
+            current = stack.pop()
+            # print('POP', current)
+            for _ in self.graph[current]:
+                adjacent, weight = _.v, _.weight
+                # print('***', adjacent, weight)
+                if not adjacent.visited:
+                    stack.append(adjacent)
+                    adjacent.visited = True
+                    self.costs[adjacent] = self.costs[current] + weight
 
-        print(costs)
+    def bfs(self, s:Node):
+        # print(f'Source: {s}')
+        self.source = s
+        self.costs = {k: 0 for k in self.graph.keys()}
+        queue = PriorityQueue()
+        queue.put(self.source)
+        s.visited = True
+        while queue.qsize():
+            current = queue.get()
+            # print('DEQUEUE', current)
+            for _ in self.graph[current]:
+                adjacent, weight = _.v, _.weight
+                # print('***', adjacent, weight)
+                if not adjacent.visited:
+                    queue.put(adjacent)
+                    adjacent.visited = True
+                    self.costs[adjacent] = self.costs[current] + weight
 
+    def reachable(self):
+        return [k for k, v in self.costs.items() if v > 0]
 
+    def unreachable(self):
+        self.costs.pop(self.source)
+        return [k for k, v in self.costs.items() if v <= 0]
 
+    def print(self):
+        print('Node  --> Adjacent(s)')
+        for k, v in self.graph.items():
+            print(k, ' --> ', v)
+
+    def print_costs(self):
+        print(f'From Source: {self.source}')
+        self.costs.pop(self.source)
+        print(self.costs)
 
 
 if __name__ == '__main__':
-
-    n = 6
-    m = 5
-    edges = [(Node(1), Node(2), 100), (Node(1), Node(3), 4), (Node(3), Node(4), 10), (Node(4), Node(5), 20), (Node(4), Node(6), 2)]
-
-    graph = Graph(n,5, edges)
+    edges = [(1,2,100),(1,3,4),(3,4,10),(4,5,20),(4,6,2), (8, 9, 100)]
+    graph = Graph(edges)
+    graph.print()
     graph.dfs(Node(1))
+    # graph.dfs(Node(8))
+    del graph
+    graph = Graph(edges)
+    graph.bfs(Node(1))
+    # graph.bfs(Node(8))
+    graph.print_costs()
     print('Bye')
